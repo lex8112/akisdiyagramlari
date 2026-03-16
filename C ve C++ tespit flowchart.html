@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APK C/C++ Tespit Yöntemleri</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'default',
+            flowchart: { curve: 'linear' },
+            securityLevel: 'loose'
+        });
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .mermaid { display: flex; justify-content: center; margin-top: 1rem; }
+    </style>
+</head>
+<body class="text-gray-800 antialiased p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-10 text-center">
+            <h1 class="text-4xl font-extrabold text-blue-900 mb-4">Android APK'da C/C++ (Native) Tespit Akış Şemaları</h1>
+            <p class="text-lg text-gray-600">Apktool ile açılmış bir uygulamanın derinlemesine analizi. Raporunuzdan çıkartılmış 28 bağımsız tespit yöntemi.</p>
+        </header>
+
+        <!-- KATEGORİ 1 -->
+        <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b-2 border-blue-500 pb-2">1. Dosya Sistemi ve Hiyerarşi Analizleri</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+            
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 1: Standart Paylaşımlı Nesne (.so) Kontrolü</h3>
+                <p class="text-sm text-gray-500 mb-4">lib/ dizini ve ABI klasörleri mimari kodun en temel kanıtıdır.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[apktool ile APK yı aç] --> B{Kök dizinde lib klasörü var mı?}
+                        B -- Evet --> C{İçinde ABI klasörleri var mı? <br> armeabi-v7a vs}
+                        C -- Evet --> D{İçinde .so uzantılı <br> dosya var mı?}
+                        D -- Evet --> E[C/C++ Native Kod KESİNLEŞTİ]
+                        B -- Hayır --> F[Bu yöntemle bulunamadı]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 2: C++ STL (Standard Template Library) Varlığı</h3>
+                <p class="text-sm text-gray-500 mb-4">Modern C++ altyapısının zorunlu taşıyıcısı.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[lib dizinini incele] --> B{Dizinler içinde libc++_shared.so <br> isimli dosya var mı?}
+                        B -- Evet --> C[Uygulama %100 Modern C++ <br> özellikleri ile derlenmiş]
+                        B -- Hayır --> D[Standart C veya farklı kütüphane]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 3: Gizlenmiş (Obfuscated) ELF Dosyaları</h3>
+                <p class="text-sm text-gray-500 mb-4">assets/ veya res/ klasörlerindeki sahte uzantılı (örn. .mp3, .dat) native dosyalar.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[assets dizinini tara] --> B{Şüpheli dosyaları <br> Hex Editor ile aç}
+                        B --> C{Dosya başlığı x7fELF <br> sihirli baytları ile mi başlıyor?}
+                        C -- Evet --> D[Gizlenmiş C/C++ İkili Dosyası <br> TESPİT EDİLDİ]
+                        C -- Hayır --> E[Normal veri dosyası]
+                </div>
+            </div>
+        </div>
+
+        <!-- KATEGORİ 2 -->
+        <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b-2 border-blue-500 pb-2">2. AndroidManifest.xml Yapısal Analizleri</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+            
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 4: hasCode Konfigürasyon Bayrağı</h3>
+                <p class="text-sm text-gray-500 mb-4">Java/DEX kodu olmadığını, tamamen C/C++ olduğunu gösterir.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[AndroidManifest.xml aç] --> B{application etiketi var mı?}
+                        B -- Evet --> C{android:hasCode=false <br> parametresi içeriyor mu?}
+                        C -- Evet --> D[Uygulama SAF C/C++ <br> DEX bytecode içermiyor]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 5: NativeActivity Tanımlaması</h3>
+                <p class="text-sm text-gray-500 mb-4">Uygulamanın giriş noktasının C/C++ main fonksiyonu olduğunu ispatlar.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[AndroidManifest.xml aç] --> B{activity etiketi var mı?}
+                        B -- Evet --> C{android:name=android.app.NativeActivity <br> tanımı kullanılmış mı?}
+                        C -- Evet --> D[Uygulama doğrudan C/C++ <br> android_main metodundan başlıyor]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 6: Native Kütüphane Meta Verisi</h3>
+                <p class="text-sm text-gray-500 mb-4">Sistemin yüklemesi gereken spesifik C kütüphanesi manifest'e gömülüdür.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[AndroidManifest.xml aç] --> B{meta-data etiketi var mı?}
+                        B -- Evet --> C{android:name=android.app.lib_name <br> tanımlanmış mı?}
+                        C -- Evet --> D[İlgili C/C++ Kütüphanesinin ismi <br> doğrudan deklare edilmiştir]
+                </div>
+            </div>
+        </div>
+
+        <!-- KATEGORİ 3 -->
+        <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b-2 border-blue-500 pb-2">3. Smali Bytecode & JNI Entegrasyon Tespitleri</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+            
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 7: System.loadLibrary Çağrısı</h3>
+                <p class="text-sm text-gray-500 mb-4">Java kodunun dinamik C kütüphanesini başlatma fonksiyonu.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[Smali dosyalarında metin araması yap] --> B{invoke-static ile <br> System.loadLibrary çağrısı var mı?}
+                        B -- Evet --> C[C/C++ modülü belleğe alınıyor <br> JNI TESPİT EDİLDİ]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 8: Mutlak Yolla System.load Çağrısı</h3>
+                <p class="text-sm text-gray-500 mb-4">Genellikle harici veya dinamik çözülen C modülleri için kullanılır.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[Smali dosyalarını tara] --> B{System.load çağrısı var mı? <br> Ljava/lang/String parametreli}
+                        B -- Evet --> C[Absolute path ile özel C/C++ <br> kütüphanesi yükleniyor]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 9: Native Metot Deklarasyonları</h3>
+                <p class="text-sm text-gray-500 mb-4">Gövdesi olmayan ve 'native' ile işaretlenen fonksiyonların tespiti.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[Smali kodunu incele] --> B{.method etiketlerini kontrol et}
+                        B --> C{Etikette native <br> erişim belirleyicisi var mı?}
+                        C -- Evet --> D[Metodun iş mantığı tamamen <br> C/C++ tarafında yazılmıştır]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 10: JNI Geçiş Optimizasyon Notasyonları</h3>
+                <p class="text-sm text-gray-500 mb-4">Performans kritik C++ algoritmaları GC duraklamalarından kaçar.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[Smali dosyalarını tara] --> B{.annotation runtime var mı?}
+                        B -- Evet --> C{İçeriği FastNative veya <br> CriticalNative mi?}
+                        C -- Evet --> D[Yüksek performanslı optimize edilmiş <br> C/C++ fonksiyonu TESPİT EDİLDİ]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 11: JNI Köprü Çerçeveleri Varlığı</h3>
+                <p class="text-sm text-gray-500 mb-4">Otomatik C++ haritalama kütüphanelerinin sınıf yolları.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[Smali dizin ağacını incele] --> B{org/bytedeco/javacpp veya <br> com/sun/jna klasörleri var mı?}
+                        B -- Evet --> C[Otomatik C/C++ Bellek eşleme <br> çerçeveleri kullanılıyor]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 12: POSIX Dinamik Bağlayıcı Çağrıları</h3>
+                <p class="text-sm text-gray-500 mb-4">Alt seviye Linux çağrıları ile doğrudan hafızaya kütüphane enjeksiyonu.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[Smali String sabitlerini tara] --> B{dlopen dlsym dlclose <br> kelimelerine referans var mı?}
+                        B -- Evet --> C[Alt seviye C/C++ kütüphanesi <br> işletim sistemi seviyesinde çalıştırılıyor]
+                </div>
+            </div>
+        </div>
+
+        <!-- KATEGORİ 4 -->
+        <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b-2 border-blue-500 pb-2">4. ELF Dosyası ve Sembol Tablosu Analizleri</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 13: JNI Statik Sembol İsimlendirmesi</h3>
+                <p class="text-sm text-gray-500 mb-4">Java'dan C'ye geçişteki standart fonksiyon isim formatı.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[.so dosyasını nm veya readelf ile aç] --> B{Export edilmiş sembollere bak}
+                        B --> C{İsimler Java_paket_adi_sinif_metot <br> formatında başlıyor mu?}
+                        C -- Evet --> D[Bu bir jenerik Linux .so değil <br> Android JNI C/C++ Kütüphanesidir]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 14: JNI Name Mangling (Sembol Karıştırması)</h3>
+                <p class="text-sm text-gray-500 mb-4">Aşırı yüklenmiş fonksiyonların parametre şifrelemesi.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[Sembol tablosuna bak] --> B{Çift alt çizgi veya <br> _1 kaçış dizisi var mı?}
+                        B -- Evet --> C[Aşırı yüklenmiş katmanlı <br> C/C++ yapısı tespit edildi]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 15: Itanium ABI C++ Belirteci</h3>
+                <p class="text-sm text-gray-500 mb-4">Kodun C ile değil, C++ ile yazıldığının sarsılmaz kanıtı.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[ELF Sembolleri] --> B{_Z önekiyle başlayan <br> semboller var mı?}
+                        B -- Evet --> C[Sınıf veya Nesne tabanlı <br> %100 C++ dili ile yazılmış]
+                        B -- Hayır --> D[Düz C dili olabilir]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 16: Dinamik JNI Kaydı Fonksiyonu</h3>
+                <p class="text-sm text-gray-500 mb-4">Geliştiricinin fonksiyonlarını dinamik olarak işletim sistemine tanıtması.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[Sembol tablosunu kontrol et] --> B{Dışa aktarılmış JNI_OnLoad <br> fonksiyonu var mı?}
+                        B -- Evet --> C[C/C++ çalışma zamanı Android <br> sanal makinesine bağlandı]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 17: NDK Derleyici İşaretleyicisi</h3>
+                <p class="text-sm text-gray-500 mb-4">Dosyanın doğrudan Android NDK ile derlendiğinin teknik meta verisi.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[readelf -n ile başlıkları incele] --> B{Seksiyonlar arasında <br> .note.android.ident var mı?}
+                        B -- Evet --> C[Doğrudan LLVM Clang NDK araç <br> zinciri kullanılarak derlenmiş]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 18: Stack-Protector (Yığın Koruması) İzleri</h3>
+                <p class="text-sm text-gray-500 mb-4">C/C++ bellek güvenliği zafiyetlerini (Buffer Overflow) önlemek için derleyici flag'leri.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[Undefined Symbols tablosunu aç] --> B{_stack_chk_fail veya <br> _stack_chk_guard var mı?}
+                        B -- Evet --> C[Native C/C++ bellek yönetimi <br> güvenlik önlemleriyle derlenmiş]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 19: C++ RTTI ve İstisna Yönetimi (Exception Handling)</h3>
+                <p class="text-sm text-gray-500 mb-4">Prosedürel dillerde olmayan, Modern C++ hata fırlatma mekanizmaları.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[ELF Sembolleri] --> B{_cxa_throw veya <br> _cxa_begin_catch var mı?}
+                        B -- Evet --> C[Karmaşık nesne yönelimli tam teşekküllü <br> Modern C++ özellikleri devrede]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 20: Bionic Libc Bağımlılıkları</h3>
+                <p class="text-sm text-gray-500 mb-4">Android'in özel C kütüphanesine olan bağımlılık zinciri.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[Dynamic Section DT_NEEDED incele] --> B{libc.so libm.so ve libdl.so <br> listeleniyor mu?}
+                        B -- Evet --> C[POSIX C dili çalışma zamanına <br> doğrudan işletim sistemi bağımlılığı]
+                </div>
+            </div>
+        </div>
+
+        <!-- KATEGORİ 5 -->
+        <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b-2 border-blue-500 pb-2">5. Oyun Motorları ve Üçüncü Taraf Çerçeveler</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 21: Unity Engine (IL2CPP) Tespiti</h3>
+                <p class="text-sm text-gray-500 mb-4">C# betiklerinin NDK kullanılarak devasa C++ kodlarına çevrilmiş hali.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[lib dizinini tara] --> B{libil2cpp.so ve <br> libunity.so dosyaları var mı?}
+                        B -- Evet --> C[Uygulama Unity ile yazılmış C# kodları <br> arka planda C++ ile derlenmiş]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 22: Unreal Engine Tespiti</h3>
+                <p class="text-sm text-gray-500 mb-4">Özünde saf bir C++ motoru olan UE'nin imzaları.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[Kök dizinleri tara] --> B{libUnreal.so dosyası veya <br> ue4 ue5 ön ekli pak sig var mı?}
+                        B -- Evet --> C[Tüm motor mantığı NDK ile derlenen <br> %100 C++ altyapısına sahip]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 23: Cocos2d-x Oyun Motoru</h3>
+                <p class="text-sm text-gray-500 mb-4">C++ ile inşa edilmiş popüler 2D motoru kütüphaneleri.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[lib dizinini tara] --> B{libcocos2dcpp.so libcocos2djs.so <br> veya libcocos2dlua.so var mı?}
+                        B -- Evet --> C[Çekirdeği C++ olan 2D Oyun <br> Çerçevesi tespit edildi]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 24: Qt Framework</h3>
+                <p class="text-sm text-gray-500 mb-4">Kurumsal Çapraz Platform dev C++ kütüphaneleri paketi.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[lib dizinini tara] --> B{libQt5Core.so libQt5Gui.so <br> gibi dosyalar var mı?}
+                        B -- Evet --> C[Gelişmiş C++ Grafik Arabirimi <br> çerçevesi QT TESPİT EDİLDİ]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 25: Xamarin / Mono Native Katmanı</h3>
+                <p class="text-sm text-gray-500 mb-4">C# çalışma zamanını cihaza port eden C/C++ köprüsü.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[lib dizinini tara] --> B{libmonosgen-2.0.so veya <br> libmonodroid.so var mı?}
+                        B -- Evet --> C[C# alt katmanında devasa bir <br> C/C++ projesi koşuyor]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 26: Medya & Görüntü (FFmpeg & OpenCV)</h3>
+                <p class="text-sm text-gray-500 mb-4">C/C++ performansına dayanan meşhur açık kaynak kütüphaneler.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[lib dizinini tara] --> B{libavcodec.so FFmpeg veya <br> libopencv_javaX.so var mı?}
+                        B -- Evet --> C[Derin C/C++ bağımlılığı olan <br> medya görüntü işleme algoritmaları]
+                </div>
+            </div>
+        </div>
+
+        <!-- KATEGORİ 6 -->
+        <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b-2 border-blue-500 pb-2">6. İleri Düzey Analizler: Rust ve Obfuscation</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 27: Rust Entegrasyonu (C-ABI)</h3>
+                <p class="text-sm text-gray-500 mb-4">C++ yerine Rust kullanıldığında bıraktığı sembolik izler.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[ELF sembollerini tara] --> B{rust_panic veya <br> core::panicking var mı?}
+                        B -- Evet --> C[Native modül C++ Clang ile değil <br> RUST rustc ile derlenmiştir]
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-2">Yöntem 28: Tamamen Native Kod Obfuscation (Gizleme)</h3>
+                <p class="text-sm text-gray-500 mb-4">Zararlı yazılımlar ve bankacılık uygulamalarının DEX dosyalarını silerek tüm yapıyı C++ üzerine atması.</p>
+                <div class="mermaid">
+                    graph TD
+                        A[Apktool kök dizinini aç] --> B{classes.dex veya <br> smali klasörü var mı?}
+                        B -- Hayır --> C{Büyük boyutlu ve <br> anlamsız isimli .so var mı?}
+                        C -- Evet --> D[Uygulama Java katmanını YOK ETMİŞ <br> Yüksek seviyeli C/C++ Obfuscation kullanılıyor]
+                </div>
+            </div>
+        </div>
+        
+        <footer class="text-center text-gray-500 text-sm mt-10 mb-8">
+            Araştırma raporu kaynaklı algoritmik dökümantasyon tamamlanmıştır.
+        </footer>
+
+    </div>
+
+</body>
+</html>
